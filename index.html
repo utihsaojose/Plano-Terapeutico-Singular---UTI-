@@ -823,4 +823,378 @@
                 <div style="color: ${cor};">
                     <strong>SAPS III: ${Math.round(score)} pontos</strong><br>
                     Mortalidade estimada: ${mortalidade.toFixed(1)}%<br>
-                   
+                    Classificação: ${risco} risco
+                </div>
+            `;
+            
+            return Math.round(score);
+        }
+        
+        // SALVAR PLANO
+        function salvarPlano() {
+            // Validar campos obrigatórios
+            const camposObrigatorios = ['nome', 'idade', 'sexo', 'leito', 'dataAdmissao', 'diagnostico', 'metaDiaria'];
+            let valido = true;
+            
+            camposObrigatorios.forEach(campo => {
+                const elemento = document.getElementById(campo);
+                if (!elemento.value.trim()) {
+                    elemento.style.borderColor = 'red';
+                    valido = false;
+                } else {
+                    elemento.style.borderColor = '';
+                }
+            });
+            
+            if (!valido) {
+                alert('Por favor, preencha todos os campos obrigatórios!');
+                return;
+            }
+            
+            // Coletar dados do formulário
+            const plano = {
+                id: document.getElementById('planoId').value || Date.now().toString(),
+                nome: document.getElementById('nome').value,
+                idade: document.getElementById('idade').value,
+                sexo: document.getElementById('sexo').value,
+                leito: document.getElementById('leito').value,
+                dataAdmissao: document.getElementById('dataAdmissao').value,
+                registro: document.getElementById('registro').value,
+                diagnostico: document.getElementById('diagnostico').value,
+                historia: document.getElementById('historia').value,
+                saps: document.getElementById('sapsResultado').innerText,
+                metaDiaria: document.getElementById('metaDiaria').value,
+                metaAnterior: document.getElementById('metaAnterior').value,
+                pendencias: document.getElementById('pendencias').value,
+                dataCriacao: new Date().toLocaleDateString('pt-BR'),
+                dataAtualizacao: new Date().toLocaleDateString('pt-BR')
+            };
+            
+            // Verificar se é edição ou novo
+            const index = planosSalvos.findIndex(p => p.id === plano.id);
+            
+            if (index !== -1) {
+                // Atualizar plano existente
+                planosSalvos[index] = plano;
+                alert('Plano atualizado com sucesso!');
+            } else {
+                // Adicionar novo plano
+                planosSalvos.push(plano);
+                alert('Plano salvo com sucesso!');
+            }
+            
+            // Salvar no localStorage
+            localStorage.setItem('planosUTI', JSON.stringify(planosSalvos));
+            
+            // Resetar formulário
+            limparFormulario();
+            
+            // Atualizar lista
+            carregarPlanos();
+            
+            // Ir para aba de planos
+            openTab('meus-planos');
+        }
+        
+        // CARREGAR PLANOS SALVOS
+        function carregarPlanos() {
+            const lista = document.getElementById('listaPlanos');
+            const semPlanos = document.getElementById('semPlanos');
+            
+            if (planosSalvos.length === 0) {
+                lista.innerHTML = '';
+                semPlanos.style.display = 'block';
+                return;
+            }
+            
+            semPlanos.style.display = 'none';
+            lista.innerHTML = '';
+            
+            // Ordenar por data mais recente
+            planosSalvos.sort((a, b) => b.id - a.id);
+            
+            // Criar cards para cada plano
+            planosSalvos.forEach(plano => {
+                const card = document.createElement('div');
+                card.className = 'plano-card';
+                card.onclick = () => carregarPlanoParaEdicao(plano.id);
+                
+                card.innerHTML = `
+                    <div class="plano-header">
+                        <h4>${plano.nome}</h4>
+                        <span class="plano-id">${plano.leito}</span>
+                    </div>
+                    <p><strong>Idade:</strong> ${plano.idade} anos</p>
+                    <p><strong>Admissão:</strong> ${plano.dataAdmissao}</p>
+                    <p><strong>Diagnóstico:</strong> ${plano.diagnostico.substring(0, 100)}${plano.diagnostico.length > 100 ? '...' : ''}</p>
+                    <p><strong>Última atualização:</strong> ${plano.dataAtualizacao}</p>
+                    <div style="margin-top: 15px; display: flex; gap: 10px;">
+                        <button class="btn" onclick="editarPlano('${plano.id}'); event.stopPropagation();" 
+                                style="padding: 8px 15px; background: var(--azul-hospital); color: white; flex: 1;">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        <button class="btn" onclick="visualizarPlanoCompleto('${plano.id}'); event.stopPropagation();" 
+                                style="padding: 8px 15px; background: var(--verde-uti); color: white; flex: 1;">
+                            <i class="fas fa-eye"></i> Ver
+                        </button>
+                        <button class="btn" onclick="excluirPlano('${plano.id}'); event.stopPropagation();" 
+                                style="padding: 8px 15px; background: var(--vermelho-alerta); color: white;">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                
+                lista.appendChild(card);
+            });
+        }
+        
+        // EDITAR PLANO
+        function editarPlano(id) {
+            carregarPlanoParaEdicao(id);
+            openTab('novo-plano');
+        }
+        
+        // CARREGAR PLANO PARA EDIÇÃO
+        function carregarPlanoParaEdicao(id) {
+            const plano = planosSalvos.find(p => p.id === id);
+            if (!plano) return;
+            
+            // Preencher formulário
+            document.getElementById('planoId').value = plano.id;
+            document.getElementById('nome').value = plano.nome || '';
+            document.getElementById('idade').value = plano.idade || '';
+            document.getElementById('sexo').value = plano.sexo || '';
+            document.getElementById('leito').value = plano.leito || '';
+            document.getElementById('dataAdmissao').value = plano.dataAdmissao || '';
+            document.getElementById('registro').value = plano.registro || '';
+            document.getElementById('diagnostico').value = plano.diagnostico || '';
+            document.getElementById('historia').value = plano.historia || '';
+            document.getElementById('metaDiaria').value = plano.metaDiaria || '';
+            document.getElementById('metaAnterior').value = plano.metaAnterior || '';
+            document.getElementById('pendencias').value = plano.pendencias || '';
+            
+            // Preencher SAPS se existir
+            if (plano.saps && plano.saps.includes('SAPS III')) {
+                document.getElementById('sapsResultado').innerHTML = plano.saps;
+            }
+            
+            // Salvar referência do plano atual
+            planoAtual = plano;
+            localStorage.setItem('ultimoPlanoEditado', id);
+        }
+        
+        // VISUALIZAR PLANO COMPLETO
+        function visualizarPlanoCompleto(id) {
+            const plano = planosSalvos.find(p => p.id === id);
+            if (!plano) return;
+            
+            const container = document.getElementById('planoViewContainer');
+            
+            container.innerHTML = `
+                <div class="plano-view">
+                    <div style="text-align: center; margin-bottom: 40px; border-bottom: 3px solid var(--azul-hospital); padding-bottom: 20px;">
+                        <h1 style="color: var(--azul-hospital);">PLANO TERAPÊUTICO SINGULAR</h1>
+                        <h3>Unidade de Terapia Intensiva Adulta</h3>
+                        <p style="color: #666;">Documento multidisciplinar de planejamento assistencial</p>
+                    </div>
+                    
+                    <div class="plano-section-view">
+                        <h3><i class="fas fa-user-injured"></i> DADOS DO PACIENTE</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 15px;">
+                            <div><strong>Nome:</strong> ${plano.nome}</div>
+                            <div><strong>Idade:</strong> ${plano.idade} anos</div>
+                            <div><strong>Sexo:</strong> ${plano.sexo === 'M' ? 'Masculino' : 'Feminino'}</div>
+                            <div><strong>Leito:</strong> ${plano.leito}</div>
+                            <div><strong>Admissão:</strong> ${plano.dataAdmissao}</div>
+                            <div><strong>Registro:</strong> ${plano.registro || 'Não informado'}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="plano-section-view">
+                        <h3><i class="fas fa-stethoscope"></i> AVALIAÇÃO CLÍNICA</h3>
+                        <p><strong>Diagnóstico Principal:</strong></p>
+                        <p style="background: #f8f9fa; padding: 15px; border-radius: 8px;">${plano.diagnostico}</p>
+                        
+                        <p style="margin-top: 20px;"><strong>História Pregressa:</strong></p>
+                        <p style="background: #f8f9fa; padding: 15px; border-radius: 8px; white-space: pre-line;">${plano.historia || 'Não informada'}</p>
+                        
+                        <p style="margin-top: 20px;"><strong>Escore SAPS III:</strong></p>
+                        <div style="background: #e8f4fd; padding: 15px; border-radius: 8px; border-left: 5px solid var(--verde-uti);">
+                            ${plano.saps || 'Não calculado'}
+                        </div>
+                    </div>
+                    
+                    <div class="plano-section-view">
+                        <h3><i class="fas fa-bullseye"></i> METAS TERAPÊUTICAS</h3>
+                        
+                        <p><strong>Meta Terapêutica Diária:</strong></p>
+                        <div style="background: #f0f9ff; padding: 20px; border-radius: 8px; margin-bottom: 20px; white-space: pre-line;">
+                            ${plano.metaDiaria}
+                        </div>
+                        
+                        <p><strong>Meta Anterior Proposta:</strong></p>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; white-space: pre-line;">
+                            ${plano.metaAnterior || 'Não informada'}
+                        </div>
+                        
+                        <p><strong>Pendências:</strong></p>
+                        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; white-space: pre-line;">
+                            ${plano.pendencias || 'Nenhuma pendência registrada'}
+                        </div>
+                    </div>
+                    
+                    <div class="plano-section-view">
+                        <h3><i class="fas fa-users"></i> EQUIPE MULTIPROFISSIONAL</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 20px;">
+                            <div>
+                                <h4><i class="fas fa-user-md"></i> Médico</h4>
+                                <div style="height: 80px; border-bottom: 2px solid #000; position: relative;">
+                                    <div style="position: absolute; bottom: 5px; font-size: 0.9rem; color: #666;">Assinatura e CRM</div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4><i class="fas fa-user-nurse"></i> Enfermagem</h4>
+                                <div style="height: 80px; border-bottom: 2px solid #000; position: relative;">
+                                    <div style="position: absolute; bottom: 5px; font-size: 0.9rem; color: #666;">Assinatura e COREN</div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4><i class="fas fa-utensils"></i> Nutrição</h4>
+                                <div style="height: 80px; border-bottom: 2px solid #000; position: relative;">
+                                    <div style="position: absolute; bottom: 5px; font-size: 0.9rem; color: #666;">Assinatura e CRN</div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4><i class="fas fa-lungs"></i> Fisioterapia</h4>
+                                <div style="height: 80px; border-bottom: 2px solid #000; position: relative;">
+                                    <div style="position: absolute; bottom: 5px; font-size: 0.9rem; color: #666;">Assinatura e CREFITO</div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4><i class="fas fa-bacteria"></i> Controle de Infecção</h4>
+                                <div style="height: 80px; border-bottom: 2px solid #000; position: relative;">
+                                    <div style="position: absolute; bottom: 5px; font-size: 0.9rem; color: #666;">Assinatura</div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4><i class="fas fa-pills"></i> Farmácia Clínica</h4>
+                                <div style="height: 80px; border-bottom: 2px solid #000; position: relative;">
+                                    <div style="position: absolute; bottom: 5px; font-size: 0.9rem; color: #666;">Assinatura e CRF</div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4><i class="fas fa-hands-helping"></i> Serviço Social</h4>
+                                <div style="height: 80px; border-bottom: 2px solid #000; position: relative;">
+                                    <div style="position: absolute; bottom: 5px; font-size: 0.9rem; color: #666;">Assinatura e CRESS</div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4><i class="fas fa-brain"></i> Psicologia</h4>
+                                <div style="height: 80px; border-bottom: 2px solid #000; position: relative;">
+                                    <div style="position: absolute; bottom: 5px; font-size: 0.9rem; color: #666;">Assinatura e CRP</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 40px; padding-top: 20px; border-top: 2px solid #eee; text-align: center; color: #666;">
+                        <p><strong>Data de criação:</strong> ${plano.dataCriacao} | <strong>Última atualização:</strong> ${plano.dataAtualizacao}</p>
+                        <p style="font-size: 0.9rem;">Documento gerado pelo Sistema de Plano Terapêutico - UTI Adulta</p>
+                    </div>
+                </div>
+                
+                <div class="btn-group no-print" style="margin-top: 30px;">
+                    <button class="btn btn-primary" onclick="imprimirPlano()">
+                        <i class="fas fa-print"></i> Imprimir Plano
+                    </button>
+                    <button class="btn" onclick="editarPlano('${plano.id}')" style="background: #6c757d; color: white;">
+                        <i class="fas fa-edit"></i> Editar Plano
+                    </button>
+                </div>
+            `;
+            
+            openTab('visualizar-plano');
+        }
+        
+        // EXCLUIR PLANO
+        function excluirPlano(id) {
+            if (confirm('Tem certeza que deseja excluir este plano? Esta ação não pode ser desfeita.')) {
+                planosSalvos = planosSalvos.filter(p => p.id !== id);
+                localStorage.setItem('planosUTI', JSON.stringify(planosSalvos));
+                carregarPlanos();
+                alert('Plano excluído com sucesso!');
+            }
+        }
+        
+        // LIMPAR FORMULÁRIO
+        function limparFormulario() {
+            document.getElementById('formPlano').reset();
+            document.getElementById('planoId').value = '';
+            document.getElementById('sapsResultado').innerHTML = 'SAPS III: -- | Mortalidade estimada: --%';
+            document.getElementById('dataAdmissao').valueAsDate = new Date();
+            planoAtual = null;
+            localStorage.removeItem('ultimoPlanoEditado');
+        }
+        
+        // VISUALIZAR PLANO ATUAL
+        function visualizarPlano() {
+            // Primeiro salva, depois visualiza
+            if (document.getElementById('nome').value && document.getElementById('diagnostico').value) {
+                salvarPlano();
+                setTimeout(() => {
+                    if (planoAtual) {
+                        visualizarPlanoCompleto(planoAtual.id);
+                    }
+                }, 500);
+            } else {
+                alert('Preencha pelo menos nome e diagnóstico para visualizar o plano.');
+            }
+        }
+        
+        // IMPRIMIR PLANO
+        function imprimirPlano() {
+            window.print();
+        }
+        
+        // EXPORTAR DADOS (BACKUP)
+        function exportarDados() {
+            const dataStr = JSON.stringify(planosSalvos, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `backup-planos-uti-${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+        
+        // IMPORTAR DADOS (RESTAURAR)
+        function importarDados(event) {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const dados = JSON.parse(e.target.result);
+                    planosSalvos = dados;
+                    localStorage.setItem('planosUTI', JSON.stringify(planosSalvos));
+                    carregarPlanos();
+                    alert(`Dados importados com sucesso! ${dados.length} planos restaurados.`);
+                } catch (error) {
+                    alert('Erro ao importar dados. Verifique se o arquivo está correto.');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>
